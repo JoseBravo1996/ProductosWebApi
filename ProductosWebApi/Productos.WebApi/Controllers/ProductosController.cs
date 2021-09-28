@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Productos.Data.Repostorios.Interfaces;
+using Productos.Dtos;
 using Productos.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Productos.WebApi.Controllers
@@ -15,19 +15,23 @@ namespace Productos.WebApi.Controllers
     public class ProductosController : ControllerBase
     {
         private IProductosRepositorio _productosRepositorio;
-        public ProductosController(IProductosRepositorio productosRepositorio) 
+        private readonly IMapper _mapper;
+
+        public ProductosController(IProductosRepositorio productosRepositorio, IMapper mapper) 
         {
             _productosRepositorio = productosRepositorio;
+            _mapper = mapper;
         }
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<IEnumerable<Producto>>> GetProductos() 
+        public async Task<ActionResult<IEnumerable<ProductoDto>>> GetProductos() 
         {
             try
             {
-                return await _productosRepositorio.ObtenerProductosAsync();
+                var productos = await _productosRepositorio.ObtenerProductosAsync();
+                return _mapper.Map<List<ProductoDto>>(productos);
             }
             catch (Exception ex)
             {
@@ -38,7 +42,7 @@ namespace Productos.WebApi.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Producto>> GetProducto(int id)
+        public async Task<ActionResult<ProductoDto>> GetProducto(int id)
         {
             var producto = await _productosRepositorio.ObtenerProductoAsync(id);
 
@@ -47,41 +51,44 @@ namespace Productos.WebApi.Controllers
                 return NotFound();
             }
 
-            return producto;
+            return _mapper.Map<ProductoDto>(producto);
         }
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Producto>> PutProducto(int id, [FromBody] Producto producto)
+        public async Task<ActionResult<ProductoDto>> PutProducto(int id, [FromBody] ProductoDto productoDto)
         {
-            if (producto == null)
+            if (productoDto == null)
                 return NotFound();
 
+            var producto = _mapper.Map<Producto>(productoDto);
             var resultado = await _productosRepositorio.Actualizar(producto);
 
             if(!resultado)
-            {
                 return BadRequest();
-            }
             
-            return producto;
+            return productoDto;
         }
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Producto>> PostProducto(Producto producto)
+        public async Task<ActionResult<Producto>> PostProducto(ProductoDto productoDto)
         {
             try
             {
+                var producto = _mapper.Map<Producto>(productoDto);
+
                 var nuevoProducto = await _productosRepositorio.Agregar(producto);
                 if (nuevoProducto == null) 
                 {
                     return BadRequest();
                 }
-                return CreatedAtAction(nameof(PostProducto), new { id = nuevoProducto.Id }, producto);
+
+                var nuevoProductoDto = _mapper.Map<ProductoDto>(producto);
+                return CreatedAtAction(nameof(PostProducto), new { id = nuevoProductoDto.Id }, nuevoProductoDto);
             }
             catch (Exception)
             {

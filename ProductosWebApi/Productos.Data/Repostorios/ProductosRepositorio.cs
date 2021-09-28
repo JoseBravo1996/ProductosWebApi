@@ -2,6 +2,7 @@
 using Productos.Data.Repostorios.Interfaces;
 using Productos.Models;
 using Productos.Models.Enum;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,20 +20,26 @@ namespace Productos.Data.Repostorios
 
         public async Task<bool> Actualizar(Producto producto)
         {
-            _context.Productos.Attach(producto);
-            _context.Entry(producto).State = EntityState.Modified;
+            var productoBd = await ObtenerProductoAsync(producto.Id);
+            productoBd.Nombre = producto.Nombre;
+            productoBd.Precio = producto.Precio;
+
             try
             {
                 return await _context.SaveChangesAsync() > 0 ? true : false;
             }
             catch (System.Exception)
             {
-                throw;
+                ;
             }
+            return false;
         }
 
         public async Task<Producto> Agregar(Producto producto)
         {
+            producto.Estatus = EstatusProducto.Activo;
+            producto.FechaRegistro = DateTime.UtcNow;
+
             _context.Productos.Add(producto);
             try
             {
@@ -40,7 +47,7 @@ namespace Productos.Data.Repostorios
             }
             catch (System.Exception)
             {
-                ;
+                return null;
             }
             return producto;
         }
